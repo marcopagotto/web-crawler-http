@@ -1,6 +1,37 @@
 //const { normalize } = require("path");
 const { JSDOM } = require("jsdom");
 
+async function crawlPage(currentURL) {
+  console.log(`Currently crawling ${currentURL} ...`);
+
+  try {
+    const resp = await fetch(currentURL);
+
+    // checks for valid status code
+    if (resp.status <= 399) {
+      console.log(`${currentURL}  found - status code: ${resp.status}`);
+    } else {
+      console.log(
+        `Error: ${currentURL} not found - status code: ${resp.status}`
+      );
+      return;
+    }
+
+    // checks for valid "text/html" response
+    const contentType = resp.headers.get("content-type");
+    if (!contentType.includes("text/html")) {
+      console.log(
+        `Error: invalid contentType: ${contentType} - page ${currentURL}`
+      );
+      return;
+    }
+
+    console.log(await resp.text());
+  } catch (err) {
+    console.log(`Error with fetch: ${err.message}, current URL: ${currentURL}`);
+  }
+}
+
 function getURLsFromHTML(htmlBody, baseURL) {
   const urls = [];
 
@@ -48,4 +79,5 @@ function normalizeURL(url) {
 module.exports = {
   normalizeURL,
   getURLsFromHTML,
+  crawlPage,
 };
