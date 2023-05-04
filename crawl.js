@@ -1,20 +1,36 @@
 //const { normalize } = require("path");
 const { JSDOM } = require("jsdom");
 
-async function crawlPage(currentURL) {
+async function crawlPage(baseURL, currentURL, pages) {
+  // filters URLs that have the provided baseURL
+  const baseURLObj = new URL(baseURL);
+  const currentURLObj = new URL(currentURL);
+  if (baseURLObj.hostname !== currentURLObj.hostname) {
+    return pages;
+  }
+
+  // checks if the page has already been crawled
+  // pages contains each URL and how many times it has been crawled
+  const normalizedCurrentURL = normalizeURL(currentURL);
+  if (pages[normalizedCurrentURL] > 0) {
+    pages[normalizedCurrentURL]++; // increments the number of times the page has been crawled/viewed
+    return pages;
+  }
+
+  // initializes the URL
+  pages[normalizedCurrentURL] = 1;
+
   console.log(`Currently crawling ${currentURL} ...`);
 
   try {
     const resp = await fetch(currentURL);
 
     // checks for valid status code
-    if (resp.status <= 399) {
-      console.log(`${currentURL}  found - status code: ${resp.status}`);
-    } else {
+    if (resp.status >= 399) {
       console.log(
         `Error: ${currentURL} not found - status code: ${resp.status}`
       );
-      return;
+      return pages;
     }
 
     // checks for valid "text/html" response
@@ -23,13 +39,20 @@ async function crawlPage(currentURL) {
       console.log(
         `Error: invalid contentType: ${contentType} - page ${currentURL}`
       );
-      return;
+      return pages;
     }
 
-    console.log(await resp.text());
+    // recursively calls crawl page with an old "pages" variable and a new "htmlURL" that stores 
+    // into an updated "pages" variable, when done, it escapes the loop and returns pages
+    const htmlBody = await resp.text();
+    const htmlURLs = getURLsFromHTML(htmlBody, baseURL);
+    for (const htmlURL of htmlURLs) {
+      pages = await crawlPage(baseURL, htmlURL, pages);
+    }
   } catch (err) {
     console.log(`Error with fetch: ${err.message}, current URL: ${currentURL}`);
   }
+  return pages;
 }
 
 function getURLsFromHTML(htmlBody, baseURL) {
