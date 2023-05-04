@@ -42,7 +42,7 @@ async function crawlPage(baseURL, currentURL, pages) {
       return pages;
     }
 
-    // recursively calls crawl page with an old "pages" variable and a new "htmlURL" that stores 
+    // recursively calls crawl page with an old "pages" variable and a new "htmlURL" that stores
     // into an updated "pages" variable, when done, it escapes the loop and returns pages
     const htmlBody = await resp.text();
     const htmlURLs = getURLsFromHTML(htmlBody, baseURL);
@@ -64,7 +64,7 @@ function getURLsFromHTML(htmlBody, baseURL) {
 
   // checks if elements of 'linkElements' are valid and - if they are - pushes them into 'urls'
   for (const linkElement of linkElements) {
-    if (linkElement.href.slice(0, 1) === "/") {
+    if (linkElement.href.startsWith("/")) {
       // relative url
       try {
         const urlObj = new URL(baseURL.concat(linkElement.href));
@@ -86,17 +86,14 @@ function getURLsFromHTML(htmlBody, baseURL) {
 }
 
 function normalizeURL(url) {
-  // removes trailing slash and converts to lowercase
-  const urlArr = url.split("");
-
-  const urlObj = new URL(
-    urlArr[urlArr.length - 1] === "/"
-      ? urlArr.slice(0, -1).join("")
-      : urlArr.join("")
-  );
-
+  const urlObj = new URL(url);
   // strips protocol
-  return urlObj.host.concat(urlObj.pathname);
+  const hostPath = `${urlObj.hostname}${urlObj.pathname}`;
+  // removes trailing slash and converts to lowercase
+  if (hostPath.length > 0 && hostPath.slice(-1) === "/") {
+    return hostPath.slice(0, -1);
+  }
+  return hostPath;
 }
 
 module.exports = {
